@@ -1,0 +1,62 @@
+# ============================================================
+# Docker Compose for Claude Code Telegram Bot
+# Usage: docker-compose up -d
+# ============================================================
+
+services:
+  claude-telegram-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: claude-telegram-bot
+    restart: unless-stopped
+
+    # Required environment variables
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}
+      - APPROVED_DIRECTORY=/projects
+
+      # Claude settings (choose one):
+      # Option 1: Use SDK with API key
+      - USE_SDK=true
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Option 2: Use SDK with existing CLI auth (set ANTHROPIC_API_KEY empty)
+      # Option 3: CLI subprocess mode
+      # - USE_SDK=false
+
+      # Claude settings JSON string (optional)
+      # Set to your claude-settings.json as a single-line string
+      - CLAUDE_SETTINGS_JSON=${CLAUDE_SETTINGS_JSON}
+
+      # Production settings
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - ENABLE_API_SERVER=true  # Required for healthcheck
+
+      # Optional: Restrict to specific users
+      # - ALLOWED_USERS=123456789
+
+    # Volume mounts for Unraid
+    volumes:
+      # Projects directory - REQUIRED
+      - ./projects:/projects:ro
+
+      # Database and logs - persist across container updates
+      - ./data:/data
+
+    # Network settings
+    ports:
+      - "8080:8080"  # API server (optional, disable if not needed)
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Security: run as non-root by default
+    # Uncomment to run as specific user (replace 1000 with your Unraid user ID)
+    # user: "1000:1000"
